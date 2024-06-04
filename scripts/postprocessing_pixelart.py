@@ -25,6 +25,9 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
                 with gr.Row():
                     downscale = gr.Slider(label="Downscale", minimum=1, maximum=32, step=2, value=8)
                     need_rescale = gr.Checkbox(label="Rescale to original size", value=True)
+                with gr.Row():
+                    preserve_alpha = gr.Checkbox(label="Preserve alpha channel", info="Preserves alpha in the final image.", value=False)
+                    alpha_clip_threshold = gr.Slider(label="Alpha clip threshold", info="If the alpha is below this value when rescaling, it will be set to 0.", minimum=0, maximum=1, step=0.01, value=0.4)
                 with gr.Tabs():
                     with gr.TabItem("Color"):
                         enable_color_limit = gr.Checkbox(label="Enable", value=False)
@@ -56,6 +59,9 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
             "downscale": downscale,
             "need_rescale": need_rescale,
 
+            "preserve_alpha": preserve_alpha,
+            "alpha_clip_threshold": alpha_clip_threshold,
+
             "enable_color_limit": enable_color_limit,
             "number_of_colors": number_of_colors,
             "quantization_method": quantization_method,
@@ -84,6 +90,9 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
             pp: scripts_postprocessing.PostprocessedImage,
 
             enabled,
+
+            preserve_alpha,
+            alpha_clip_threshold,
 
             downscale,
             need_rescale,
@@ -121,12 +130,8 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
         def process_image(original_image):
             original_width, original_height = original_image.size
 
-            if original_image.mode != "RGB":
-                new_image = original_image.convert("RGB")
-            else:
-                new_image = original_image
-
-            new_image = downscale_image(new_image, downscale)
+            new_image = original_image
+            new_image = downscale_image(new_image, downscale, preserve_alpha=preserve_alpha, alpha_clip_threshold=alpha_clip_threshold)
 
             if use_color_palette:
                 new_image = limit_colors(

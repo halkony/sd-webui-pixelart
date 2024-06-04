@@ -15,11 +15,33 @@ QUANTIZATION_METHODS = {
 }
 
 
-def downscale_image(image: Image, scale: int) -> Image:
+def downscale_image(image: Image, scale: int, preserve_alpha: bool = False, alpha_clip_threshold: float = 0.3) -> Image:
     width, height = image.size
-    downscaled_image = image.resize((int(width / scale), int(height / scale)), Image.NEAREST)
-    return downscaled_image
+    new_width, new_height = int(width / scale), int(height / scale)
 
+    if not preserve_alpha:
+        return image.resize((new_width, new_height), Image.NEAREST)
+    else:
+        return downscale_image_with_alpha(image, scale, alpha_clip_threshold)
+
+def downscale_image_with_alpha(image: Image, scale: int, alpha_clip_threshold: float = 0.3) -> Image:
+    width, height = image.size
+    new_width, new_height = int(width / scale), int(height / scale)
+    downscaled_image = Image.new("RGBA", (new_width, new_height))
+
+    for i in range(new_width):
+        for j in range(new_height):
+            sub_image = image.crop(
+                (i * scale, j * scale, (i + 1) * scale, (j + 1) * scale)
+            )
+            A = [pixel[3] for pixel in sub_image.getdata()]
+            avg_alpha = sum(A) // len(A)
+            R, G, B = sub_image.resize((1, 1), Image.NEAREST).getpixel((0, 0))[:3]
+            if avg_alpha / 255 < alpha_clip_threshold:
+                avg_alpha = 0
+            downscaled_image.putpixel((i, j), (R, G, B, avg_alpha))
+
+    return downscaled_image
 
 def resize_image(image: Image, size) -> Image:
     width, height = size

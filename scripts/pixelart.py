@@ -23,6 +23,10 @@ class Script(scripts.Script):
             with gr.Row():
                 enabled = gr.Checkbox(label="Enable", value=False)
 
+            with gr.Row():
+                preserve_alpha = gr.Checkbox(label="Preserve alpha channel", value=False)
+                alpha_clip_threshold = gr.Slider(label="Alpha clip threshold", minimum=0, maximum=1, step=0.01, value=0.4)
+
             with gr.Column():
                 with gr.Row():
                     downscale = gr.Slider(label="Downscale", minimum=1, maximum=32, step=2, value=8)
@@ -52,13 +56,16 @@ class Script(scripts.Script):
                         palette_colors = gr.Slider(label="Palette Size (only for complex images)", minimum=1, maximum=256, step=1, value=16)
                         dither_method_palette = gr.Radio(choices=dither_methods, value=dither_methods[0], label='Colors dither method')
 
-        return [enabled, downscale, need_rescale, enable_color_limit, number_of_colors, quantization_method, dither_method, use_k_means, is_grayscale, number_of_shades, quantization_method_grayscale, dither_method_grayscale, use_k_means_grayscale, is_black_and_white, is_inversed_black_and_white, black_and_white_threshold, use_color_palette, palette_image, palette_colors, dither_method_palette]
+        return [enabled, preserve_alpha, alpha_clip_threshold, downscale, need_rescale, enable_color_limit, number_of_colors, quantization_method, dither_method, use_k_means, is_grayscale, number_of_shades, quantization_method_grayscale, dither_method_grayscale, use_k_means_grayscale, is_black_and_white, is_inversed_black_and_white, black_and_white_threshold, use_color_palette, palette_image, palette_colors, dither_method_palette]
 
     def postprocess(
         self,
         p,
         processed,
         enabled,
+
+        preserve_alpha,
+        alpha_clip_threshold,
 
         downscale,
         need_rescale,
@@ -101,7 +108,7 @@ class Script(scripts.Script):
             else:
                 new_image = original_image
 
-            new_image = downscale_image(new_image, downscale)
+            new_image = downscale_image(new_image, downscale, preserve_alpha=preserve_alpha, alpha_clip_threshold=alpha_clip_threshold)
 
             if use_color_palette:
                 new_image = limit_colors(
